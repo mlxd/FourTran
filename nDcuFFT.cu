@@ -14,6 +14,8 @@
 
 //#####################################################################
 //#####################################################################
+// These are adapted from macros in the CUDA samples and are exempt 
+// from my licensing choices.
 
 #define ERR_CHECK(err_val) {                                    \
     cudaError_t err = err_val;                                  \
@@ -103,7 +105,6 @@ void fft_HDH(FTParams *params, int tDim, const double2 *dataIn, double2 *dataOut
 	ERR_CHECK( cudaMemcpy(dataOut, data_D, sizeof(double2) * params->numElem, cudaMemcpyDeviceToHost) );
 }
 
-
 int main(){
     int numDims = 3;
     int dimSize[] = {1,2,3,};
@@ -116,4 +117,32 @@ int main(){
     params.offset = (int*) malloc(sizeof(int)*numDims);
 
     ftParamsInit(numDims,dimSize, &params);
+
+	double2 *dataIn, *dataOut;
+
+    ERR_CHECK( cudaMalloc( (cufftDoubleComplex**) &data_D, sizeof(cufftDoubleComplex)*NX) );
+
+    data_H1DFFT = (cufftDoubleComplex*) malloc(sizeof(cufftDoubleComplex)*NX);
+    data_HmanyFFT = (cufftDoubleComplex*) malloc(sizeof(cufftDoubleComplex)*NX);
+    data_H0 = (cufftDoubleComplex*) malloc(sizeof(cufftDoubleComplex)*NX);
+
+    // ******************************************************************************** //
+    // Create the input data
+    // ******************************************************************************** //
+    std::cout << "INPUT:\n";
+    for(int ii=0; ii<cbrtNX; ++ii){
+        std::cout << "C(:,:," << ii+1 << ")=[";
+        for(int jj=0; jj<cbrtNX; ++jj){
+            for(int kk=0; kk<cbrtNX; ++kk){
+                data_H0[kk + cbrtNX*(jj + ii*cbrtNX)].x = (double) ii;
+                data_H0[kk + cbrtNX*(jj + ii*cbrtNX)].y = (double) jj;//(double) jj;
+                std::cout << data_H0[kk + cbrtNX*(jj + ii*cbrtNX)].x << " + 1i*" << data_H0[kk + cbrtNX*(jj + ii*cbrtNX)].y << "\t";
+            }
+            std::cout << "\n";
+        }
+        std::cout << "]\n";
+    }
+    std::cout << "\n --- \n";
+
+    ERR_CHECK( cudaMemcpy(data_D, data_H0, sizeof(cufftDoubleComplex) * NX, cudaMemcpyHostToDevice));
 }
