@@ -49,16 +49,16 @@ void ftParamsInit(int numDims, int* dimSize, FTParams *params);
 /*
 *	Send data from host to device, transform, send data back to host, return host pointer
 */
-void fft_HDH(FTParams *params, int tDim, const double2 *dataIn, double2 *dataOut);
+void fft_HDH(FTParams *params, int tDim,  double2 *dataIn, double2 *dataOut);
 
 /*
 *	Send data from host to device, transform, return device pointer
 */
-void fft_HD(FTParams *params, int tDim, const double2 *dataIn, double2 *dataOut);
+void fft_HD(FTParams *params, int tDim, double2 *dataIn, double2 *dataOut);
 
 /*
 *	Transform data on device, return device pointer
 */
-void fft_DD(FTParams *params, int tDim, const double2 *dataIn, double2 *dataOut);
+void fft_DD(FTParams *params, int tDim, double2 *dataIn, double2 *dataOut);
 
 #endif //FOURTRAN_H

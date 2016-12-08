@@ -77,13 +77,13 @@ void ftParamsInit(int numDims, int* dimSize, FTParams *params){
 }
 
 /*
-* Here we do the magical transformation the data
+* Here we do the magical transformation
 */
-void fft_HDH(FTParams *params, int tDim, const double2 *dataIn, double2 *dataOut){
+void fft_HDH(FTParams *params, int tDim, double2 *dataIn, double2 *dataOut){
 	cufftHandle plan;
 	double2 *data_D;
 	ERR_CHECK( 
-		cudaMalloc((void**) &data_D, sizeof(double2)*params->numElem) );
+		cudaMalloc((void**) &data_D, sizeof(double2) * params->numElem) );
 	ERR_CHECK( 
 		cudaMemcpy(data_D, dataIn, sizeof(double2) * params->numElem, cudaMemcpyHostToDevice) );
 	FFT_ERR_CHECK(	
@@ -103,11 +103,12 @@ void fft_HDH(FTParams *params, int tDim, const double2 *dataIn, double2 *dataOut
 		);
 	}
 	ERR_CHECK( cudaMemcpy(dataOut, data_D, sizeof(double2) * params->numElem, cudaMemcpyDeviceToHost) );
+	cudaFree(data_D);
 }
 
 int main(){
-    int numDims = 3;
-    int dimSize[] = {1,2,3,};
+    int numDims = 2;
+    int dimSize[] = {9,9,3};
     FTParams params;
 
     params.numTransforms = (int*) malloc(sizeof(int)*numDims);
@@ -120,23 +121,20 @@ int main(){
 
 	double2 *dataIn, *dataOut;
 
-    ERR_CHECK( cudaMalloc( (cufftDoubleComplex**) &data_D, sizeof(cufftDoubleComplex)*NX) );
-
-    data_H1DFFT = (cufftDoubleComplex*) malloc(sizeof(cufftDoubleComplex)*NX);
-    data_HmanyFFT = (cufftDoubleComplex*) malloc(sizeof(cufftDoubleComplex)*NX);
-    data_H0 = (cufftDoubleComplex*) malloc(sizeof(cufftDoubleComplex)*NX);
+    dataIn = (double2*) malloc(sizeof(double2) * params.numElem);
+    dataOut = (double2*) malloc(sizeof(double2) * params.numElem);
 
     // ******************************************************************************** //
     // Create the input data
     // ******************************************************************************** //
     std::cout << "INPUT:\n";
-    for(int ii=0; ii<cbrtNX; ++ii){
+    for( int ii=0; ii < params.dims[0]; ++ii ){
         std::cout << "C(:,:," << ii+1 << ")=[";
-        for(int jj=0; jj<cbrtNX; ++jj){
-            for(int kk=0; kk<cbrtNX; ++kk){
-                data_H0[kk + cbrtNX*(jj + ii*cbrtNX)].x = (double) ii;
-                data_H0[kk + cbrtNX*(jj + ii*cbrtNX)].y = (double) jj;//(double) jj;
-                std::cout << data_H0[kk + cbrtNX*(jj + ii*cbrtNX)].x << " + 1i*" << data_H0[kk + cbrtNX*(jj + ii*cbrtNX)].y << "\t";
+        for( int jj=0; jj < params.dims[1]; ++jj ){
+            for( int kk=0; kk < params.dims[2]; ++kk ){
+                dataIn[ kk + params.dims[1] * ( jj + ii * params.dims[0] ) ].x = (double) ii;
+                dataIn[ kk + params.dims[1] * ( jj + ii * params.dims[0] ) ].y = (double) jj;
+                std::cout << dataIn[ kk + params.dims[1] * ( jj + ii * params.dims[0] ) ].x << " + 1i*" << dataIn[ kk + params.dims[1] * ( jj + ii * params.dims[0] ) ].y << "\t";
             }
             std::cout << "\n";
         }
@@ -144,5 +142,32 @@ int main(){
     }
     std::cout << "\n --- \n";
 
-    ERR_CHECK( cudaMemcpy(data_D, data_H0, sizeof(cufftDoubleComplex) * NX, cudaMemcpyHostToDevice));
+    //ERR_CHECK( cudaMalloc( (double2**) &dataD, sizeof(double2) * params.numElem) );
+    //ERR_CHECK( cudaMemcpy(dataD, dataIn, sizeof(double2) * params.numElem, cudaMemcpyHostToDevice) );   	 
+	//ERR_CHECK( cudaMemcpy(dataOut, dataD, sizeof(double2) * params.numElem, cudaMemcpyDeviceToHost) );
+
+    // ******************************************************************************** //
+    // Perform FFT 
+    // ******************************************************************************** //
+
+	fft_HDH(&params, 1, dataIn, dataOut);
+
+    // ******************************************************************************** //
+    // Show FFT results
+    // ******************************************************************************** //
+    std::cout << "OUTPUT:\n";
+    for( int ii=0; ii < params.dims[0]; ++ii ){
+        std::cout << "C(:,:," << ii+1 << ")=[";
+        for( int jj=0; jj < params.dims[1]; ++jj ){
+            for( int kk=0; kk < params.dims[2]; ++kk ){
+                dataOut[ kk + params.dims[1] * ( jj + ii * params.dims[0] ) ].x = (double) ii;
+                dataOut[ kk + params.dims[1] * ( jj + ii * params.dims[0] ) ].y = (double) jj;
+                std::cout << dataOut[ kk + params.dims[1] * ( jj + ii * params.dims[0] ) ].x << " + 1i*" << dataOut[ kk + params.dims[1] * ( jj + ii * params.dims[0] ) ].y << "\t";
+            }
+            std::cout << "\n";
+        }
+        std::cout << "]\n";
+    }
+    std::cout << "\n --- \n";
+	free (dataIn); free (dataOut);
 }
